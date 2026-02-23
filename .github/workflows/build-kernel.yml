@@ -39,11 +39,11 @@ jobs:
       - name: List vendor configs and load defconfig
         run: |
           ls -la arch/arm64/configs/vendor/
-          make ARCH=arm64 vendor/haydn_qgki_defconfig || echo "尝试其他常见配置..." && make ARCH=arm64 vendor/haydn_defconfig || echo "加载失败，请检查文件名"
+          make ARCH=arm64 vendor/haydn_qgki_defconfig || make ARCH=arm64 vendor/haydn_defconfig
 
       - name: Integrate SukiSU Ultra
         run: |
-          curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s nongki
+          curl -LSs https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh | bash -s nongki
           scripts/config --file .config \
             -e CONFIG_KPROBES \
             -e CONFIG_KPROBE_EVENT \
@@ -61,7 +61,7 @@ jobs:
           make -j$(nproc) Image.gz-dtb \
             KBUILD_BUILD_USER="白墨(Whiteink)工作室-🐾白墨🐾Whiteink🐾" \
             KBUILD_BUILD_HOST="GitHub-Actions" \
-            KCFLAGS="-Wno-frame-larger-than -Wno-unused-variable -Wno-format -Wno-all -Wno-error"
+            KCFLAGS="-Wno-error -Wno-implicit-function-declaration -Wno-undeclared-identifier -Wno-frame-larger-than -Wno-unused-variable -Wno-format"
 
       - name: Pack AnyKernel3
         run: |
