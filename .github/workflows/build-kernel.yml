@@ -28,11 +28,13 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y git make gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf flex bison bc libssl-dev zip
+          sudo apt install -y git make gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf flex bison bc libssl-dev zip wget
 
-      - name: Clone Clang 18
+      - name: Download Clang 18 (Google official)
         run: |
-          git clone --depth=1 https://github.com/ZyCromerZ/Clang.git -b 18.0.0 $HOME/clang-18
+          wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android14-release/clang-r458507.tar.gz
+          mkdir -p $HOME/clang-18
+          tar -xzf clang-r458507.tar.gz -C $HOME/clang-18
 
       - name: Load defconfig
         run: |
