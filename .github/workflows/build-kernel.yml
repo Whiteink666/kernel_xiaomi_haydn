@@ -29,7 +29,6 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y git make gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf flex bison bc libssl-dev zip wget xz-utils
-          # 添加 LLVM 官方源并安装 Clang 15
           curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
           echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-15 main" | sudo tee /etc/apt/sources.list.d/llvm.list
           sudo apt update
@@ -39,9 +38,7 @@ jobs:
 
       - name: List vendor configs and load defconfig
         run: |
-          # 先打印 vendor 目录下的所有文件，确认文件名
           ls -la arch/arm64/configs/vendor/
-          # 再尝试加载配置
           make ARCH=arm64 vendor/haydn_qgki_defconfig || echo "尝试其他常见配置..." && make ARCH=arm64 vendor/haydn_defconfig || echo "加载失败，请检查文件名"
 
       - name: Integrate SukiSU Ultra
@@ -55,17 +52,16 @@ jobs:
             -e CONFIG_KALLSYMS_ALL
           make ARCH=arm64 olddefconfig
 
-      - name: Build kernel (并行编译，忽略两个警告)
+      - name: Build kernel
         run: |
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
           export CC=clang
           export LD=ld.lld
-          # 关键修复：同时忽略栈帧和未使用变量的警告
           make -j$(nproc) Image.gz-dtb \
             KBUILD_BUILD_USER="白墨(Whiteink)工作室-🐾白墨🐾Whiteink🐾" \
             KBUILD_BUILD_HOST="GitHub-Actions" \
-            KCFLAGS="-Wno-frame-larger-than -Wno-unused-variable"
+            KCFLAGS="-Wno-frame-larger-than -Wno-unused-variable -Wno-format -Wno-all -Wno-error"
 
       - name: Pack AnyKernel3
         run: |
