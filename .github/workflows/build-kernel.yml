@@ -55,14 +55,27 @@ jobs:
             -e CONFIG_KALLSYMS_ALL
           make ARCH=arm64 olddefconfig
 
-      - name: Build kernel (开启详细日志)
+      - name: Build kernel (并行编译，跳过 fs/)
         run: |
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
           export CC=clang
           export LD=ld.lld
-          # 关键修复：添加 V=1 开启详细日志
-          make V=1 -j$(nproc) Image.gz-dtb \
+          # 第一步：并行编译，跳过 fs/ 目录，快速完成大部分工作
+          make -j$(nproc) Image.gz-dtb \
+            KBUILD_BUILD_USER="${{ github.event.inputs.author }}" \
+            KBUILD_BUILD_HOST="GitHub-Actions" \
+            KCFLAGS="-Wno-frame-larger-than" \
+            SKIP_MODULES="fs"
+
+      - name: Build fs/ directory (单线程，开启详细日志)
+        run: |
+          export ARCH=arm64
+          export CROSS_COMPILE=aarch64-linux-gnu-
+          export CC=clang
+          export LD=ld.lld
+          # 第二步：单线程编译 fs/ 目录，开启详细日志，精准定位错误
+          make V=1 -j1 fs/ \
             KBUILD_BUILD_USER="${{ github.event.inputs.author }}" \
             KBUILD_BUILD_HOST="GitHub-Actions" \
             KCFLAGS="-Wno-frame-larger-than"
