@@ -25,17 +25,15 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Install dependencies and Clang 18
+      - name: Install dependencies and Clang 15
         run: |
           sudo apt update
           sudo apt install -y git make gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf flex bison bc libssl-dev zip wget xz-utils
-          # 添加 LLVM 官方源并安装 Clang 18
-          curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main" | sudo tee /etc/apt/sources.list.d/llvm.list
-          sudo apt update
-          sudo apt install -y clang-18 lld-18
-          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100
-          sudo update-alternatives --install /usr/bin/ld.lld ld.lld /usr/bin/ld.lld-18 100
+          # 直接安装 Ubuntu 官方源中的 Clang 15
+          sudo apt install -y clang-15 lld-15
+          # 创建软链接，让系统默认使用 Clang 15
+          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-15 100
+          sudo update-alternatives --install /usr/bin/ld.lld ld.lld /usr/bin/ld.lld-15 100
 
       - name: Load defconfig
         run: |
