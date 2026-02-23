@@ -25,16 +25,17 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Install dependencies
+      - name: Install dependencies and Clang 18
         run: |
           sudo apt update
           sudo apt install -y git make gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf flex bison bc libssl-dev zip wget xz-utils
-
-      - name: Download Clang 18 (Community mirror)
-        run: |
-          wget -q https://github.com/llvm/llvm-project/releases/download/llvmorg-18.1.8/clang+llvm-18.1.8-x86_64-linux-gnu-ubuntu-22.04.tar.xz
-          mkdir -p $HOME/clang-18
-          tar -xJf clang+llvm-18.1.8-x86_64-linux-gnu-ubuntu-22.04.tar.xz -C $HOME/clang-18 --strip-components=1
+          # 添加 LLVM 官方源并安装 Clang 18
+          curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt update
+          sudo apt install -y clang-18 lld-18
+          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100
+          sudo update-alternatives --install /usr/bin/ld.lld ld.lld /usr/bin/ld.lld-18 100
 
       - name: Load defconfig
         run: |
@@ -55,7 +56,8 @@ jobs:
         run: |
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
-          export PATH=$HOME/clang-18/bin:$PATH
+          export CC=clang
+          export LD=ld.lld
           make -j$(nproc) Image.gz-dtb \
             KBUILD_BUILD_USER="${{ github.event.inputs.author }}" \
             KBUILD_BUILD_HOST="GitHub-Actions"
