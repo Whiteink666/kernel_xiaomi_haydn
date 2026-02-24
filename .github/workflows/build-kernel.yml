@@ -1,3 +1,34 @@
+name: Build K40Pro haydn Kernel with SukiSU Ultra
+
+on:
+  workflow_dispatch:
+    inputs:
+      kernel_name:
+        description: '自定义内核名字'
+        required: true
+        default: '5.4_SukiSUUltra_By白墨(Whiteink)工作室'
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout kernel
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set env
+        run: echo "KERNEL_NAME=${{ github.event.inputs.kernel_name }}" >> $GITHUB_ENV
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y git make bc bison flex libssl-dev libncurses-dev gcc-aarch64-linux-gnu zip unzip dwarves
+
+      - name: Integrate SukiSU Ultra
+        run: |
+          curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s main
+
       - name: Build kernel
         run: |
           make ARCH=arm64 clean mrproper
@@ -8,13 +39,24 @@
           ./scripts/config -e CONFIG_KALLSYMS_ALL
           ./scripts/config -e CONFIG_MODULES
 
-          # 强制关掉所有警告变错误 + 放开栈帧
           ./scripts/config -d CONFIG_WERROR
           ./scripts/config -d CONFIG_WERROR_FRAME_WARN
           ./scripts/config --set-val CONFIG_FRAME_WARN 16384
-          ./scripts/config -d CONFIG_SCHED_STACK_END_CHECK
 
-          # 编译时强制忽略警告
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
-            KBUILD_CFLAGS="-Wno-frame-larger-than=" \
+            KBUILD_CFLAGS="-Wno-frame-larger-than" \
             -j$(nproc)
+
+      - name: Pack AnyKernel3
+        run: |
+          git clone https://github.com/osm0sis/AnyKernel3.git
+          cp arch/arm64/boot/Image.gz-dtb AnyKernel3/
+          cd AnyKernel3
+          sed -i 's/^device.name1=.*/device.name1=haydn/' anykernel.sh
+          zip -r9 "${{ env.KERNEL_NAME }}-haydn.zip" * -x .git README.md
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-haydn
+          path: AnyKernel3/*.zip
