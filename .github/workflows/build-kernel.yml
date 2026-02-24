@@ -18,7 +18,10 @@ jobs:
           fetch-depth: 1
 
       - name: Set env
-        run: echo "KERNEL_NAME=${{ github.event.inputs.kernel_name }}" >> $GITHUB_ENV
+        run: |
+          # 对内核名字进行转义，移除或替换特殊字符
+          KERNEL_NAME_SAFE=$(echo "${{ github.event.inputs.kernel_name }}" | sed 's/[()"'\'']//g' | sed 's/ /_/g')
+          echo "KERNEL_NAME=$KERNEL_NAME_SAFE" >> $GITHUB_ENV
 
       - name: Install dependencies
         run: |
@@ -34,7 +37,6 @@ jobs:
       - name: Build kernel
         run: |
           make ARCH=arm64 clean mrproper
-          # 关键修复：使用 vendor 下的 haydn-qgki_defconfig
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- vendor/haydn-qgki_defconfig
           
           ./scripts/config --set-str CONFIG_LOCALVERSION "-${{ env.KERNEL_NAME }}"
