@@ -6,7 +6,7 @@ on:
       kernel_name:
         description: '自定义内核名字'
         required: true
-        default: '5.4_SukiSUUltra_By白墨(Whiteink)工作室'
+        default: '5.4_SukiSUUltra_By白墨_Whiteink_工作室'
 
 jobs:
   build:
@@ -16,9 +16,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-
-      - name: Set env
-        run: echo "KERNEL_NAME=${{ github.event.inputs.kernel_name }}" >> $GITHUB_ENV
 
       - name: Install dependencies
         run: |
@@ -34,14 +31,14 @@ jobs:
           make ARCH=arm64 clean mrproper
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- vendor/haydn-qgki_defconfig
 
-          ./scripts/config --set-str CONFIG_LOCALVERSION "-${{ env.KERNEL_NAME }}"
-          ./scripts/config -e CONFIG_KPM
-          ./scripts/config -e CONFIG_KALLSYMS_ALL
-          ./scripts/config -e CONFIG_MODULES
-
+          # 关闭警告变错误 + 放宽栈帧 → 彻底解决 binfmt_elf.c 报错
           ./scripts/config -d CONFIG_WERROR
           ./scripts/config -d CONFIG_WERROR_FRAME_WARN
           ./scripts/config --set-val CONFIG_FRAME_WARN 16384
+
+          ./scripts/config -e CONFIG_KPM
+          ./scripts/config -e CONFIG_KALLSYMS_ALL
+          ./scripts/config -e CONFIG_MODULES
 
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
             KBUILD_CFLAGS="-Wno-frame-larger-than" \
@@ -53,7 +50,7 @@ jobs:
           cp arch/arm64/boot/Image.gz-dtb AnyKernel3/
           cd AnyKernel3
           sed -i 's/^device.name1=.*/device.name1=haydn/' anykernel.sh
-          zip -r9 "${{ env.KERNEL_NAME }}-haydn.zip" * -x .git README.md
+          zip -r9 "K40Pro-haydn-SukiSU-Ultra.zip" * -x .git README.md
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
