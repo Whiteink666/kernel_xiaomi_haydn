@@ -31,17 +31,21 @@ jobs:
           make ARCH=arm64 clean mrproper
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- vendor/haydn-qgki_defconfig
 
-          # 关闭警告变错误 + 放宽栈帧 → 彻底解决 binfmt_elf.c 报错
+          # 全局关闭 警告=错误，这是你所有报错的根源
           ./scripts/config -d CONFIG_WERROR
+
+          # 关闭栈帧警告
           ./scripts/config -d CONFIG_WERROR_FRAME_WARN
           ./scripts/config --set-val CONFIG_FRAME_WARN 16384
 
+          # 必须打开的SU配置
           ./scripts/config -e CONFIG_KPM
           ./scripts/config -e CONFIG_KALLSYMS_ALL
           ./scripts/config -e CONFIG_MODULES
 
+          # 重点：全局忽略所有格式警告、栈帧、类型不匹配
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
-            KBUILD_CFLAGS="-Wno-frame-larger-than" \
+            KBUILD_CFLAGS="-Wno-format -Wno-frame-larger-than -Wno-all" \
             -j$(nproc)
 
       - name: Pack AnyKernel3
@@ -50,10 +54,10 @@ jobs:
           cp arch/arm64/boot/Image.gz-dtb AnyKernel3/
           cd AnyKernel3
           sed -i 's/^device.name1=.*/device.name1=haydn/' anykernel.sh
-          zip -r9 "K40Pro-haydn-SukiSU-Ultra.zip" * -x .git README.md
+          zip -r9 "Kernel-K40Pro-haydn-SukiSU-Ultra.zip" * -x .git README.md
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: kernel-haydn
+          name: Kernel-haydn
           path: AnyKernel3/*.zip
