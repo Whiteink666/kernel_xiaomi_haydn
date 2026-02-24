@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       kernel_name:
-        description: '5.4SukiSU-Ultra By白墨(Whiteink)工作室-🐾白墨🐾Whiteink🐾'
+        description: '自定义内核名字'
         required: true
         default: 'K40Pro-SukiSU-Ultra'
 
@@ -34,7 +34,8 @@ jobs:
       - name: Build kernel
         run: |
           make ARCH=arm64 clean mrproper
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- haydn_defconfig
+          # 关键修复：使用 vendor 下的 haydn-qgki_defconfig
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- vendor/haydn-qgki_defconfig
           
           ./scripts/config --set-str CONFIG_LOCALVERSION "-${{ env.KERNEL_NAME }}"
           ./scripts/config -e CONFIG_KPM
