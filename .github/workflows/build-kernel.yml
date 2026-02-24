@@ -1,20 +1,12 @@
-name: Build K40Pro haydn 5.4 SukiSU Ultra
+name: Build K40Pro haydn Kernel with SukiSU Ultra
 
 on:
   workflow_dispatch:
     inputs:
       kernel_name:
-        description: "内核名称"
+        description: '5.4SukiSU-Ultra By白墨(Whiteink)工作室-🐾白墨🐾Whiteink🐾'
         required: true
-        default: "Haydn-SukiSU"
-      version:
-        description: "版本号"
-        required: true
-        default: "v1.0"
-      author:
-        description: "作者名"
-        required: true
-        default: "MyName"
+        default: 'K40Pro-SukiSU-Ultra'
 
 jobs:
   build:
@@ -25,56 +17,42 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Install dependencies and Clang 15
-        run: |
-          sudo apt update
-          sudo apt install -y git make gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf flex bison bc libssl-dev zip wget xz-utils
-          curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-15 main" | sudo tee /etc/apt/sources.list.d/llvm.list
-          sudo apt update
-          sudo apt install -y clang-15 lld-15
-          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-15 100
-          sudo update-alternatives --install /usr/bin/ld.lld ld.lld /usr/bin/ld.lld-15 100
+      - name: Set env
+        run: echo "KERNEL_NAME=${{ github.event.inputs.kernel_name }}" >> $GITHUB_ENV
 
-      - name: List vendor configs and load defconfig
+      - name: Install dependencies
         run: |
-          ls -la arch/arm64/configs/vendor/
-          make ARCH=arm64 vendor/haydn_qgki_defconfig || make ARCH=arm64 vendor/haydn_defconfig
+          sudo apt update
+          sudo apt install -y \
+            git make bc bison flex libssl-dev libncurses-dev \
+            gcc-aarch64-linux-gnu zip unzip dwarves
 
       - name: Integrate SukiSU Ultra
         run: |
-          curl -LSs https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh | bash -s nongki
-          scripts/config --file .config \
-            -e CONFIG_KPROBES \
-            -e CONFIG_KPROBE_EVENT \
-            -e CONFIG_KSU_TRACEPOINT_HOOK \
-            -e CONFIG_KALLSYMS \
-            -e CONFIG_KALLSYMS_ALL
-          make ARCH=arm64 olddefconfig
+          curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s main
 
       - name: Build kernel
         run: |
-          export ARCH=arm64
-          export CROSS_COMPILE=aarch64-linux-gnu-
-          export CC=clang
-          export LD=ld.lld
-          make -j$(nproc) Image.gz-dtb \
-            KBUILD_BUILD_USER="白墨(Whiteink)工作室-🐾白墨🐾Whiteink🐾" \
-            KBUILD_BUILD_HOST="GitHub-Actions" \
-            KCFLAGS="-Wno-error -Wno-implicit-function-declaration -Wno-undeclared-identifier -Wno-frame-larger-than -Wno-unused-variable -Wno-format"
+          make ARCH=arm64 clean mrproper
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- haydn_defconfig
+          
+          ./scripts/config --set-str CONFIG_LOCALVERSION "-${{ env.KERNEL_NAME }}"
+          ./scripts/config -e CONFIG_KPM
+          ./scripts/config -e CONFIG_KALLSYMS_ALL
+          ./scripts/config -e CONFIG_MODULES
+
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc)
 
       - name: Pack AnyKernel3
         run: |
-          git clone --depth=1 https://github.com/osm0sis/AnyKernel3.git ak3
-          cp arch/arm64/boot/Image.gz-dtb ak3/
-          cd ak3
-          sed -i "s/kernel.string=.*/kernel.string=${{ github.event.inputs.kernel_name }} ${{ github.event.inputs.version }} by ${{ github.event.inputs.author }}/" anykernel.sh
-          sed -i "s/device.name1=.*/device.name1=haydn/" anykernel.sh
-          sed -i "s/device.name2=.*/device.name2=Redmi K40 Pro/" anykernel.sh
-          zip -r9 ../${{ github.event.inputs.kernel_name }}-${{ github.event.inputs.version }}.zip * -x .git* README.md
+          git clone https://github.com/osm0sis/AnyKernel3.git
+          cp arch/arm64/boot/Image.gz-dtb AnyKernel3/
+          cd AnyKernel3
+          sed -i 's/^device.name1=.*/device.name1=haydn/' anykernel.sh
+          zip -r9 "${{ env.KERNEL_NAME }}-haydn.zip" * -x .git README.md
 
-      - name: Upload flashable zip
+      - name: Upload zip
         uses: actions/upload-artifact@v4
         with:
-          name: kernel-flashable-zip
-          path: "*.zip"
+          name: ${{ env.KERNEL_NAME }}-haydn
+          path: AnyKernel3/*.zip
